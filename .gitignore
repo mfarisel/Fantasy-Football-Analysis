@@ -6,3 +6,6 @@ __pycache__/
 
 #ignore any other cache files
 *.pyc
+
+#Ignore Mac file
+.DS_Store
