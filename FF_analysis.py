@@ -8,11 +8,30 @@ Created on Wed Sep 28 19:13:03 2022
 ref: https://stmorse.github.io/journal/espn-fantasy-v3.html
 """
 
+import pandas as pd
 from pointsFromAverage import pointsFromAverage
 from config import keys
 import requests
-import pandas as pd
-import seaborn as sb
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+def MaxValues(playerDataDict,slots):
+    
+    matchingPositions = []
+    for player in playerDataDict:
+        if (player['positionID'] == position['positionID']):
+            matchingPositions.append([player['teamIndex'],player['pointsScored']])
+            
+    topScoringPlayerIndexes = [0]*slots
+    
+    sortedPositions = sorted(matchingPositions,key=lambda x: x[1],reverse=True)
+    
+    for i in range(slots):
+        topScoringPlayerIndexes[i] = sortedPositions[i][0]
+    
+    return topScoringPlayerIndexes
+
 
 currentWeek = 7
 
@@ -46,14 +65,17 @@ matchResults = d2['teams']
 class player:
     def __init__(self, name, teamid):
         self.name = name
-        self.teamid = teamid
+        self.teamid = teamid  #need to fix naming convention here
+        self.oppoID = 0
+        self.homeTeam = False
         self.result = 'null'
         self.points = 0
         self.pointsFromAverage = 0
         self.oppoPoints = 0
         self.oppoPointsFromAverage = 0
         self.teamDict = {}
-        self.playerData = []    
+        self.playerData = []
+        self.maxPotentialPoints = 0
         
         
 #initializing each of the player classes
@@ -86,6 +108,8 @@ for game in games:
         if team.teamid == game['away']['teamId']:
             team.points = game['away']['totalPoints']
             team.oppoPoints = game['home']['totalPoints']
+            team.oppoID = game['home']['teamId']
+            
             if winner == 'away':
                 team.result = 'won'
             else:
@@ -94,6 +118,8 @@ for game in games:
         elif team.teamid == game['home']['teamId']:
             team.points = game['home']['totalPoints']
             team.oppoPoints = game['away']['totalPoints']
+            team.oppoID = game['away']['teamId']
+            team.homeTeam = True
             if winner == 'home':
                 team.result = 'won'
             else:
@@ -110,27 +136,90 @@ for team in teams:
     team.pointsFromAverage = team.points - averagePoints
     team.oppoPointsFromAverage = team.oppoPoints - averagePoints
     
-
-pointsFromAverage(teams,currentWeek)
-
-
-
-
 for team in teams:
     #assigning team data to each class
     team.teamDict = matchResults[team.teamid-1]['roster']['entries']
-
+    teamIndex = 0
     #sorting through team data to pull valuable player information
     for player in team.teamDict:
         tempDict = {}
         tempDict['name'] = player['playerPoolEntry']['player']['fullName']
         tempDict['pointsScored'] = player['playerPoolEntry']['appliedStatTotal']
-        tempDict['position'] = player['playerPoolEntry']['player']['defaultPositionId']
+        tempDict['positionID'] = player['playerPoolEntry']['player']['defaultPositionId']
+        tempDict['teamIndex'] = teamIndex
+        
+        teamIndex += 1
         
         team.playerData.append(tempDict)
 
 
 
+for team in teams:
+    
+    rosterComposition = [{'positionName' :'QB',
+                          'positionID' : 1,
+                          'positionSlots' : 1,
+                          'positionPoints': 0},
+                         
+                         {'positionName' :'RB',
+                          'positionID' : 2,
+                          'positionSlots' : 2,
+                          'positionPoints': 0},
+                         
+                         {'positionName' :'WR',
+                          'positionID' : 3,
+                          'positionSlots' : 3,
+                          'positionPoints': 0},
+                         
+                         {'positionName' :'TE',
+                          'positionID' : 4,
+                          'positionSlots' : 1,
+                          'positionPoints': 0},
+                         
+                         {'positionName' :'K',
+                          'positionID' : 5,
+                          'positionSlots' : 1,
+                          'positionPoints': 0},
+                         
+                         {'positionName' :'DEF',
+                          'positionID' : 16,
+                          'positionSlots' : 1,
+                          'positionPoints': 0},
+                         
+                         {'positionName' :'FLEX',
+                          'positionID' : 0,
+                          'positionSlots' : 1,
+                          'positionPoints': 0}]
+
+    
+    tempDict = team.playerData.copy()
+    for position in rosterComposition:
+        
+        if position['positionName'] != 'FLEX':
+            
+            positionTopScorers = MaxValues(tempDict, position['positionSlots'])
+            
+            for scorerID in positionTopScorers:
+                for i in range(len(tempDict)):
+                    if scorerID == tempDict[i]['teamIndex']:
+                        position['positionPoints'] += tempDict[i]['pointsScored']
+                        tempDict.pop(i)
+                        break
+        else:
+            pass
+    
+    flexPoints = 0
+    for player in tempDict:
+        if player['positionID'] != 1 and player['pointsScored'] > flexPoints:
+            flexPoints = player['pointsScored']
+    
+    rosterComposition[-1]['positionPoints'] = flexPoints
+    
+    maxTeamPotentialPoints = 0
+    for position in rosterComposition:
+        maxTeamPotentialPoints += position['positionPoints']
+    
+    team.maxPotentialPoints = maxTeamPotentialPoints
 
 
 
@@ -141,9 +230,44 @@ for team in teams:
 
 
 
+def PLOB(teams):
+    matchResults = {'PLOB':[],'points':[],'maxPotentialPoints':[],'oppoID':[],'name':[]}
+    for team in teams:
+        if team.homeTeam == True:
+            #label these as home
+            matchResults['points'].append(team.points)
+            matchResults['maxPotentialPoints'].append(team.maxPotentialPoints)
+            matchResults['oppoID'].append(team.oppoID)
+            matchResults['name'].append(team.name)
+            matchResults['PLOB'].append(team.maxPotentialPoints-team.points)
+            
+        else:
+            #label these as away
+            matchResults['points'].append(team.points)
+            matchResults['maxPotentialPoints'].append(team.maxPotentialPoints)
+            matchResults['oppoID'].append(team.oppoID)
+            matchResults['name'].append(team.name)
+            matchResults['PLOB'].append(team.maxPotentialPoints-team.points)
+        
+        data = pd.DataFrame(data=matchResults)
+        
+        
+        fig, ax = plt.subplots()
+        
+        ax.bar(data['name'], data['PLOB'], width=.5, label='PLOB')
+        ax.bar(data['name'], data['points'], width=.5, label='Points Scored')
+        
 
 
+        
+        ax.set_ylabel('Points')
+        ax.set_title('Points Left on the Bench')
+        ax.legend()
+        
+        plt.show()
 
+        
+    return data
 
 
 
