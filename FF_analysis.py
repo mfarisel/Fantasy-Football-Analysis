@@ -259,18 +259,32 @@ def PLOB(teams):
         
         data = pd.DataFrame(data=matchResults)
         fig, ax = plt.subplots()
-
-        ticks= [1,2,4,5,7,8]
-        ax.bar(ticks, data['points'], width=.5, label='Points')
-        ax.bar(ticks, data['PLOB'], width=.5, label='Points Scored', bottom=data['PLOB'])
+        
+        interval = 5
+        spacing = 2
+        
+        ticks=[]
+        for i in range(len(teams)):
+            if i == 0:
+                ticks.append(interval)
+            elif i%2 == 0:
+                ticks.append(ticks[i-1]+(2*interval))
+            else:
+                ticks.append(ticks[i-1]+interval)
+            
+            
+            
+        ax.bar(ticks, data['points'], width=(interval-spacing), label='Points Scored')
+        ax.bar(ticks, data['PLOB'], width=(interval-spacing), label='PLOB', bottom=data['points'])
+        
+        ax.grid(axis='y')
         ax.set_xticks(ticks, labels=data['name'], rotation = 'vertical')
-
         ax.set_ylim(top = max(matchResults['maxPossible'])+20) #FIX THIS USING MAX POSSIBLE POINTS
 
         ax.set_ylabel('Points')
         ax.set_title('Points Left on the Bench')
         
-        
+        ax.legend()
         plt.show()
 
         
