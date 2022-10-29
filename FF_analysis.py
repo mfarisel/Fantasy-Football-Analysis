@@ -27,9 +27,14 @@ def MaxValues(playerDataDict,slots):
     
     sortedPositions = sorted(matchingPositions,key=lambda x: x[1],reverse=True)
     
-    for i in range(slots):
-        topScoringPlayerIndexes[i] = sortedPositions[i][0]
-    
+    #If someone doesn't have any players in a certain position, this try-except will catch it
+    try:
+        for i in range(slots):
+            topScoringPlayerIndexes[i] = sortedPositions[i][0]
+    except IndexError:
+        print('Nessel cannot fill a full roster')
+    except:
+        print('Something else is wrong')
     return topScoringPlayerIndexes
 
 
@@ -231,38 +236,40 @@ for team in teams:
 
 
 def PLOB(teams):
-    matchResults = {'PLOB':[],'points':[],'maxPotentialPoints':[],'oppoID':[],'name':[]}
+    matchResults = {'PLOB':[],'points':[], 'oppoID':[],'name':[],'maxPossible':[]}
+    plotOrder = []
     for team in teams:
         if team.homeTeam == True:
-            #label these as home
-            matchResults['points'].append(team.points)
-            matchResults['maxPotentialPoints'].append(team.maxPotentialPoints)
-            matchResults['oppoID'].append(team.oppoID)
-            matchResults['name'].append(team.name)
-            matchResults['PLOB'].append(team.maxPotentialPoints-team.points)
-            
-        else:
-            #label these as away
-            matchResults['points'].append(team.points)
-            matchResults['maxPotentialPoints'].append(team.maxPotentialPoints)
-            matchResults['oppoID'].append(team.oppoID)
-            matchResults['name'].append(team.name)
-            matchResults['PLOB'].append(team.maxPotentialPoints-team.points)
-        
+            plotOrder.append(team.teamid)
+            plotOrder.append(team.oppoID)
+    
+    for i in plotOrder:
+        for team in teams:
+            if team.teamid == i:
+                matchResults['points'].append(team.points)
+                matchResults['oppoID'].append(team.oppoID)
+                matchResults['name'].append(team.name)
+                matchResults['PLOB'].append(team.maxPotentialPoints-team.points)
+                matchResults['maxPossible'].append(team.maxPotentialPoints)
+                
+                break
+
+
         data = pd.DataFrame(data=matchResults)
         
-        
+        data = pd.DataFrame(data=matchResults)
         fig, ax = plt.subplots()
-        
-        ax.bar(data['name'], data['PLOB'], width=.5, label='PLOB')
-        ax.bar(data['name'], data['points'], width=.5, label='Points Scored')
-        
 
+        ticks= [1,2,4,5,7,8]
+        ax.bar(ticks, data['points'], width=.5, label='Points')
+        ax.bar(ticks, data['PLOB'], width=.5, label='Points Scored', bottom=data['PLOB'])
+        ax.set_xticks(ticks, labels=data['name'], rotation = 'vertical')
 
-        
+        ax.set_ylim(top = max(matchResults['maxPossible'])+20) #FIX THIS USING MAX POSSIBLE POINTS
+
         ax.set_ylabel('Points')
         ax.set_title('Points Left on the Bench')
-        ax.legend()
+        
         
         plt.show()
 
