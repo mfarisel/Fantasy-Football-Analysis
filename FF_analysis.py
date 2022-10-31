@@ -274,13 +274,16 @@ def PLOB(teams):
             
             
             
-        ax.bar(ticks, data['points'], width=(interval-spacing), label='Points Scored')
-        ax.bar(ticks, data['PLOB'], width=(interval-spacing), label='PLOB', bottom=data['points'])
+        points = ax.bar(ticks, data['points'], width=(interval-spacing), label='Points Scored',zorder=2)
+        plob = ax.bar(ticks, data['PLOB'], width=(interval-spacing), label='PLOB', bottom=data['points'],zorder=2)
         
-        ax.grid(axis='y')
+        ax.grid(axis='y',zorder=1)
         ax.set_xticks(ticks, labels=data['name'], rotation = 'vertical')
         ax.set_ylim(top = max(matchResults['maxPossible'])+20) #FIX THIS USING MAX POSSIBLE POINTS
-
+        
+        ax.bar_label(points, label_type='center',zorder=3)
+        ax.bar_label(plob, label_type='center',zorder=3)
+        
         ax.set_ylabel('Points')
         ax.set_title('Points Left on the Bench')
         
