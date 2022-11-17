@@ -32,13 +32,12 @@ def MaxValues(playerDataDict,slots):
         for i in range(slots):
             topScoringPlayerIndexes[i] = sortedPositions[i][0]
     except IndexError:
-        print('Nessel cannot fill a full roster')
+        return False     #take this out
     except:
         print('Something else is wrong')
     return topScoringPlayerIndexes
 
-
-currentWeek = 7
+currentWeek = 10
 
 swid = keys['fantasyFootballSWID']
 espn_s2 = keys['fantasyFootballESPN_S2']
@@ -57,6 +56,9 @@ r = requests.get(url,
 
 d = r.json()
 
+matchups = d['schedule']
+games = [x for x in matchups if x['matchupPeriodId'] == currentWeek]
+
 #This request is for the points left on the bench plot
 r2 = requests.get(url,
                  cookies={"swid": swid,
@@ -66,6 +68,7 @@ r2 = requests.get(url,
 d2 = r2.json()
 
 matchResults = d2['teams']
+
 
 class player:
     def __init__(self, name, teamid):
@@ -101,9 +104,6 @@ tim = player('tim', 12)
 #Creating a list of teams to loop through
 teams = [mattf, mattw, jesse, nessel, dave, chris, andrew, calvin, luke, mahoney, kate, tim]
 
-
-matchups = d['schedule']
-games = [x for x in matchups if x['matchupPeriodId'] == currentWeek]
 
 for game in games:
     winner = game['winner'].lower()
@@ -203,13 +203,13 @@ for team in teams:
         if position['positionName'] != 'FLEX':
             
             positionTopScorers = MaxValues(tempDict, position['positionSlots'])
-            
-            for scorerID in positionTopScorers:
-                for i in range(len(tempDict)):
-                    if scorerID == tempDict[i]['teamIndex']:
-                        position['positionPoints'] += tempDict[i]['pointsScored']
-                        tempDict.pop(i)
-                        break
+            if positionTopScorers != False:  #####################################
+                for scorerID in positionTopScorers:
+                    for i in range(len(tempDict)):
+                        if scorerID == tempDict[i]['teamIndex']:
+                            position['positionPoints'] += tempDict[i]['pointsScored']
+                            tempDict.pop(i)
+                            break
         else:
             pass
     
@@ -236,7 +236,7 @@ for team in teams:
 
 
 def PLOB(teams):
-    matchResults = {'PLOB':[],'points':[], 'oppoID':[],'name':[],'maxPossible':[]}
+    matchStats = {'PLOB':[],'points':[], 'oppoID':[],'name':[],'maxPossible':[]}
     plotOrder = []
     for team in teams:
         if team.homeTeam == True:
@@ -246,55 +246,123 @@ def PLOB(teams):
     for i in plotOrder:
         for team in teams:
             if team.teamid == i:
-                matchResults['points'].append(team.points)
-                matchResults['oppoID'].append(team.oppoID)
-                matchResults['name'].append(team.name)
-                matchResults['PLOB'].append(team.maxPotentialPoints-team.points)
-                matchResults['maxPossible'].append(team.maxPotentialPoints)
+                matchStats['points'].append(team.points)
+                matchStats['oppoID'].append(team.oppoID)
+                matchStats['name'].append(team.name)
+                matchStats['PLOB'].append(team.maxPotentialPoints-team.points)
+                matchStats['maxPossible'].append(team.maxPotentialPoints)
                 
                 break
 
 
-        data = pd.DataFrame(data=matchResults)
+    interval = 6
+    spacing = 2
+    
+    ticks=[]
+    for i in range(len(teams)):
+        if i == 0:
+            ticks.append(interval)
+        elif i%2 == 0:
+            ticks.append(ticks[i-1]+(2*interval))
+        else:
+            ticks.append(ticks[i-1]+interval)
         
-        data = pd.DataFrame(data=matchResults)
-        fig, ax = plt.subplots()
-        
-        interval = 5
-        spacing = 2
-        
-        ticks=[]
-        for i in range(len(teams)):
-            if i == 0:
-                ticks.append(interval)
-            elif i%2 == 0:
-                ticks.append(ticks[i-1]+(2*interval))
-            else:
-                ticks.append(ticks[i-1]+interval)
-            
-            
-            
-        points = ax.bar(ticks, data['points'], width=(interval-spacing), label='Points Scored',zorder=2)
-        plob = ax.bar(ticks, data['PLOB'], width=(interval-spacing), label='PLOB', bottom=data['points'],zorder=2)
-        
-        ax.grid(axis='y',zorder=1)
-        ax.set_xticks(ticks, labels=data['name'], rotation = 'vertical')
-        ax.set_ylim(top = max(matchResults['maxPossible'])+20) #FIX THIS USING MAX POSSIBLE POINTS
-        
-        ax.bar_label(points, label_type='center',zorder=3)
-        ax.bar_label(plob, label_type='center',zorder=3)
-        
-        ax.set_ylabel('Points')
-        ax.set_title('Points Left on the Bench')
-        
-        ax.legend()
-        plt.show()
 
         
+        
+        
+    data = pd.DataFrame(data=matchStats)
+    fig, ax = plt.subplots()
+         
+        
+    points = ax.bar(ticks, data['points'], width=(interval-spacing), label='Points Scored',zorder=2)
+    plob = ax.bar(ticks, data['PLOB'], width=(interval-spacing), label='PLOB', bottom=data['points'],zorder=2)
+    
+
+    ax.set_xticks(ticks, labels=data['name'], rotation = 'vertical')
+    
+    
+    ax.set_ylim(top = max(matchStats['maxPossible'])+50) #FIX THIS USING MAX POSSIBLE POINTS
+    
+    ax.bar_label(points, label_type='center',zorder=3,rotation='vertical')
+    ax.bar_label(plob, label_type='center',zorder=3,rotation='vertical')
+    
+    ax.set_ylabel('Points',labelpad=10)
+    ax.set_title('Points Left on the Bench',pad=15)
+    ax.grid(axis='y',zorder=1,which='both')
+    
+    ax.legend()
+    plt.show()
+    fig.subplots_adjust(bottom=0.2)
+    fig.savefig('PLOB.png',dpi=300,pad_inches=2)
+    
     return data
 
+pointsFromAverage(teams,currentWeek)
+PLOB(teams)
 
 
+
+'''
+matchStats = {'PLOB':[],'points':[], 'oppoID':[],'name':[],'maxPossible':[]}
+plotOrder = []
+for team in teams:
+    if team.homeTeam == True:
+        plotOrder.append(team.teamid)
+        plotOrder.append(team.oppoID)
+
+for i in plotOrder:
+    for team in teams:
+        if team.teamid == i:
+            matchStats['points'].append(team.points)
+            matchStats['oppoID'].append(team.oppoID)
+            matchStats['name'].append(team.name)
+            matchStats['PLOB'].append(team.maxPotentialPoints-team.points)
+            matchStats['maxPossible'].append(team.maxPotentialPoints)
+            
+            break
+
+
+interval = 5
+spacing = 2
+
+ticks=[]
+for i in range(len(teams)):
+    if i == 0:
+        ticks.append(interval)
+    elif i%2 == 0:
+        ticks.append(ticks[i-1]+(2*interval))
+    else:
+        ticks.append(ticks[i-1]+interval)
+
+print(ticks)
+
+
+
+data = pd.DataFrame(data=matchStats)
+fig, ax = plt.subplots()
+     
+    
+points = ax.bar(ticks, data['points'], width=(interval-spacing), label='Points Scored',zorder=2)
+plob = ax.bar(ticks, data['PLOB'], width=(interval-spacing), label='PLOB', bottom=data['points'],zorder=2)
+
+
+ax.set_xticks(ticks, labels=data['name'], rotation = 'vertical')
+
+
+ax.set_ylim(top = max(matchStats['maxPossible'])+20) #FIX THIS USING MAX POSSIBLE POINTS
+
+ax.bar_label(points, label_type='center',zorder=3)
+ax.bar_label(plob, label_type='center',zorder=3)
+
+ax.set_ylabel('Points')
+ax.set_title('Points Left on the Bench')
+ax.grid(axis='y',zorder=1)
+
+ax.legend()
+plt.show()
+
+'''
 
 
 

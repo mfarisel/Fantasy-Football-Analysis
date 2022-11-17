@@ -18,7 +18,9 @@ def pointsFromAverage(teams,week):
         matchResults['oppoPoints'].append(team.oppoPointsFromAverage)
         matchResults['result'].append(team.result)
         matchResults['name'].append(team.name)
-        
+    
+    print(matchResults)
+    
     totalScoredPoints = 0
     for team in teams:
         totalScoredPoints += team.points
@@ -37,7 +39,7 @@ def pointsFromAverage(teams,week):
     
     
     colors = ['black','darkgrey','brown','red','darkorange','gold',
-              'darkgreen','cyan','dodgerblue','blueviolet','darkorchid','fuchsia']
+              'fuchsia','cyan','dodgerblue','darkgreen','darkorchid','springgreen']
     
     plot = sb.relplot(data=x, 
                       x ='points',
@@ -119,4 +121,4 @@ def pointsFromAverage(teams,week):
     plot.ax.fill([0,minValue,minValue],[0,0,minValue],'lightcoral',
                  zorder=0)
     
-    #plot.savefig('PFA.png',dpi=300)
+    plot.savefig('PFA.png',dpi=300)
